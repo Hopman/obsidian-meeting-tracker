@@ -1,7 +1,7 @@
 import { Plugin, TFile, debounce } from 'obsidian';
 
-const MARKER_START = '<!-- meetings:start -->';
-const MARKER_END = '<!-- meetings:end -->';
+const HEADING_RE = /^##[ \t]+Meetings[ \t]*$/m;
+const NEXT_HEADING_RE = /^#{1,2}[ \t]+.*$/m;
 
 export default class DailyMeetingsPlugin extends Plugin {
   private debouncedUpdate = debounce(
@@ -97,37 +97,44 @@ export default class DailyMeetingsPlugin extends Plugin {
   }
 
   private generateBlock(meetings: TFile[]): string {
-    const lines = meetings.map((file) => {
-      const mark = this.isProcessed(file) ? '/' : ' ';
-      return `- [${mark}] [[${file.basename}]]`;
-    });
-    return `${MARKER_START}\n${lines.join('\n')}\n${MARKER_END}`;
+    return meetings
+      .map((file) => {
+        const mark = this.isProcessed(file) ? '/' : ' ';
+        return `- [${mark}] [[${file.basename}]]`;
+      })
+      .join('\n');
+  }
+
+  private buildSection(list: string): string {
+    return list ? `## Meetings\n\n${list}\n` : '## Meetings\n';
+  }
+
+  private joinSection(section: string, rest: string, hasList: boolean): string {
+    if (!rest) return section;
+    return hasList ? section + '\n' + rest : section + rest;
   }
 
   private applyBlock(
     content: string,
-    block: string
-  ): { result: string; changed: boolean } {
-    const startIdx = content.indexOf(MARKER_START);
-    const endIdx = content.indexOf(MARKER_END);
+    list: string
+  ): { result: string; changed: boolean } | null {
+    const headingMatch = HEADING_RE.exec(content);
+    if (!headingMatch) return null;
 
-    if (startIdx === -1 || endIdx === -1) {
-      // Markers missing — prepend block at top of file
-      return { result: block + '\n' + content, changed: true };
-    }
+    const startIdx = headingMatch.index;
+    const headingLineEnd = startIdx + headingMatch[0].length;
+    const afterHeading = content.slice(headingLineEnd);
+    const nextHeadingMatch = NEXT_HEADING_RE.exec(afterHeading);
+    const sectionEnd = nextHeadingMatch
+      ? headingLineEnd + nextHeadingMatch.index
+      : content.length;
+    const rest = content.slice(sectionEnd);
 
-    const existing = content.slice(startIdx, endIdx + MARKER_END.length);
-    if (existing === block) {
-      return { result: content, changed: false };
-    }
+    const result =
+      content.slice(0, startIdx) +
+      this.joinSection(this.buildSection(list), rest, list.length > 0);
 
-    return {
-      result:
-        content.slice(0, startIdx) +
-        block +
-        content.slice(endIdx + MARKER_END.length),
-      changed: true,
-    };
+    return { result, changed: result !== content };
   }
 
   private async ensureFolderPath(filePath: string): Promise<void> {
@@ -146,20 +153,24 @@ export default class DailyMeetingsPlugin extends Plugin {
 
   async updateTodaysMeetings(): Promise<void> {
     const meetings = this.getMeetingsForToday();
-    const block = this.generateBlock(meetings);
+    const list = this.generateBlock(meetings);
     const notePath = this.getDailyNotePath();
     const existing = this.app.vault.getAbstractFileByPath(notePath);
 
     if (!existing) {
       await this.ensureFolderPath(notePath);
-      await this.app.vault.create(notePath, block + '\n');
+      await this.app.vault.create(notePath, this.buildSection(list));
       return;
     }
 
     if (!(existing instanceof TFile)) return;
 
     const content = await this.app.vault.read(existing);
-    const { result, changed } = this.applyBlock(content, block);
+    const applied = this.applyBlock(content, list);
+    const { result, changed } = applied ?? {
+      result: this.joinSection(this.buildSection(list), content, list.length > 0),
+      changed: true,
+    };
     if (changed) {
       await this.app.vault.modify(existing, result);
     }

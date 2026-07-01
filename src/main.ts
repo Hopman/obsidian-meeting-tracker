@@ -1,7 +1,7 @@
 import { Plugin, TFile, debounce } from 'obsidian';
 
-const HEADING_RE = /^##[ \t]+Meetings[ \t]*$/m;
-const NEXT_HEADING_RE = /^#{1,2}[ \t]+.*$/m;
+const HEADING_RE = /^###[ \t]+Meetings[ \t]*$/m;
+const NEXT_HEADING_RE = /^#{1,3}[ \t]+.*$/m;
 
 export default class DailyMeetingsPlugin extends Plugin {
   private debouncedUpdate = debounce(
@@ -106,7 +106,7 @@ export default class DailyMeetingsPlugin extends Plugin {
   }
 
   private buildSection(list: string): string {
-    return list ? `## Meetings\n\n${list}\n` : '## Meetings\n';
+    return list ? `### Meetings\n\n${list}\n` : '### Meetings\n';
   }
 
   private joinSection(section: string, rest: string, hasList: boolean): string {

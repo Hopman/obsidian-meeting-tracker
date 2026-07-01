@@ -1,6 +1,6 @@
 {
   "name": "daily-meetings-tracker",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Obsidian plugin — generates and maintains a daily checklist of meetings in the daily note",
   "main": "main.js",
   "scripts": {

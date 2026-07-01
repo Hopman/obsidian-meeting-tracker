@@ -7,7 +7,7 @@ Automatically generates and maintains a daily checklist of meetings in your dail
 The plugin scans your vault for notes with `type: Meeting` in the frontmatter and injects a checklist into today's daily note. The checklist reflects whether each meeting has been processed.
 
 ```markdown
-## Meetings
+### Meetings
 
 <!-- meetings:start -->
 - [ ] [[2026-06-30 - Standup]]
@@ -41,7 +41,7 @@ YYYY/MM/ww/YYYY-MM-DD.md
 
 Where `ww` is the ISO 8601 week number, zero-padded (e.g. `26`).
 
-The `## Meetings` heading and markers are expected to be present via your Templater template. If they are missing, the plugin prepends the block at the top of the file.
+The `### Meetings` heading and markers are expected to be present via your Templater template. If they are missing, the plugin prepends the block at the top of the file.
 
 ## Checklist states
 

@@ -46,16 +46,16 @@ YYYY/MM/ww/YYYY-MM-DD.md
 
 ## 4. Output Structure (Daily Note)
 
-The `## Meetings` heading and markers are inserted by the Templater template when the daily note is created. The plugin only manages the content between the markers.
+The `## Meetings` heading is inserted by the Templater template when the daily note is created. The plugin owns all content between `## Meetings` and the next heading of equal or higher level (or end of file).
 
 ```markdown
 ## Meetings
 
-<!-- meetings:start -->
 - [ ] [[2026-05-30 - Refinement]]
 - [/] [[2026-05-30 - Kwartaalreview]]
-<!-- meetings:end -->
 ```
+
+No HTML comment markers. The heading itself is the boundary.
 
 ### Mapping rules
 
@@ -105,7 +105,7 @@ Scan the entire vault. No exceptions.
 ### Mode: One-way sync
 
 * Meeting → Daily note
-* Daily note edits between the markers are ignored and overwritten
+* Any content between `## Meetings` and the next heading is owned by the plugin and will be overwritten
 
 ---
 
@@ -127,20 +127,11 @@ All triggers are debounced at **1 second**.
 If the daily note does not exist:
 
 * Create folder structure recursively if missing
-* Create file with the meetings block at the top
+* Create file with `## Meetings` heading and the list at the top
 
----
+If `## Meetings` is missing from an existing daily note:
 
-## 11. Marker System
-
-Plugin only modifies content between:
-
-```markdown
-<!-- meetings:start -->
-<!-- meetings:end -->
-```
-
-If markers are missing (e.g. daily note was created without the template), the plugin prepends the block at the top of the file.
+* Prepend the heading and list at the top of the file
 
 ---
 

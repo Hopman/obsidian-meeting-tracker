@@ -106,7 +106,7 @@ export default class DailyMeetingsPlugin extends Plugin {
   }
 
   private buildSection(list: string): string {
-    return list ? `### Meetings\n\n${list}\n` : '### Meetings\n';
+    return list ? `### Meetings\n${list}\n` : '### Meetings\n';
   }
 
   private joinSection(section: string, rest: string, hasList: boolean): string {

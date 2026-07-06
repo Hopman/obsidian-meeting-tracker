@@ -1,44 +1,60 @@
-import { Plugin, TFile, debounce } from 'obsidian';
+import { Plugin, TFile, Notice, debounce } from 'obsidian';
 
 const HEADING_RE = /^###[ \t]+Meetings[ \t]*$/m;
 const NEXT_HEADING_RE = /^#{1,3}[ \t]+.*$/m;
+const DAILY_NOTE_DATE_RE = /(\d{4}-\d{2}-\d{2})\.md$/;
 
 export default class DailyMeetingsPlugin extends Plugin {
-  private debouncedUpdate = debounce(
-    () => this.updateTodaysMeetings(),
-    1000,
-    true
-  );
+  private debouncedUpdaters = new Map<string, () => void>();
 
   async onload() {
     this.addCommand({
-      id: 'update-todays-meetings',
-      name: "Update Today's Meetings",
-      callback: () => this.updateTodaysMeetings(),
+      id: 'update-current-daily-meetings',
+      name: 'Update Meetings in Current Daily Note',
+      callback: () => this.updateCurrentDailyNote(),
     });
 
     this.app.workspace.onLayoutReady(() => {
-      this.debouncedUpdate();
+      this.getDebouncedUpdater(this.formatYMD(new Date()))();
     });
 
     this.registerEvent(
       this.app.workspace.on('file-open', (file) => {
-        if (file && this.isTodaysDailyNote(file)) {
-          this.debouncedUpdate();
-        }
+        const date = file && this.resolveDailyNoteDate(file);
+        if (date) this.getDebouncedUpdater(date)();
       })
     );
 
     this.registerEvent(
       this.app.metadataCache.on('changed', (file) => {
-        if (this.isMeetingNote(file)) {
-          this.debouncedUpdate();
-        }
+        if (!this.isMeetingNote(file)) return;
+        const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+        const date = this.frontmatterDateString(fm?.date);
+        if (date) this.getDebouncedUpdater(date)();
       })
     );
   }
 
   onunload() { }
+
+  private getDebouncedUpdater(date: string): () => void {
+    let updater = this.debouncedUpdaters.get(date);
+    if (!updater) {
+      updater = debounce(() => this.updateMeetingsForDate(date), 1000, true);
+      this.debouncedUpdaters.set(date, updater);
+    }
+    return updater;
+  }
+
+  private updateCurrentDailyNote(): void {
+    const file = this.app.workspace.getActiveFile();
+    const date = file && this.resolveDailyNoteDate(file);
+    if (!date) {
+      new Notice('Not a daily note — nothing to update.');
+      return;
+    }
+    void this.updateMeetingsForDate(date);
+  }
 
   private isoWeek(date: Date): number {
     // ISO 8601: week containing the first Thursday of the year is week 1
@@ -56,6 +72,14 @@ export default class DailyMeetingsPlugin extends Plugin {
     return `${y}-${m}-${d}`;
   }
 
+  private parseYMD(value: string): Date | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return null;
+    const [, y, m, d] = match;
+    const date = new Date(Number(y), Number(m) - 1, Number(d));
+    return isNaN(date.getTime()) ? null : date;
+  }
+
   private getDailyNotePath(date: Date = new Date()): string {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -64,8 +88,13 @@ export default class DailyMeetingsPlugin extends Plugin {
     return `${y}/${m}/${ww}/${y}-${m}-${d}.md`;
   }
 
-  private isTodaysDailyNote(file: TFile): boolean {
-    return file.path === this.getDailyNotePath();
+  private resolveDailyNoteDate(file: TFile): string | null {
+    const match = DAILY_NOTE_DATE_RE.exec(file.path);
+    if (!match) return null;
+    const dateStr = match[1];
+    const date = this.parseYMD(dateStr);
+    if (!date) return null;
+    return file.path === this.getDailyNotePath(date) ? dateStr : null;
   }
 
   private isMeetingNote(file: TFile): boolean {
@@ -77,15 +106,14 @@ export default class DailyMeetingsPlugin extends Plugin {
     return String(value ?? '');
   }
 
-  private getMeetingsForToday(): TFile[] {
-    const today = this.formatYMD(new Date());
+  private getMeetingsForDate(date: string): TFile[] {
     return this.app.vault
       .getMarkdownFiles()
       .filter((file) => {
         const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
         return (
           fm?.type === 'Meeting' &&
-          this.frontmatterDateString(fm?.date) === today
+          this.frontmatterDateString(fm?.date) === date
         );
       })
       .sort((a, b) => a.stat.ctime - b.stat.ctime);
@@ -151,10 +179,13 @@ export default class DailyMeetingsPlugin extends Plugin {
     }
   }
 
-  async updateTodaysMeetings(): Promise<void> {
-    const meetings = this.getMeetingsForToday();
+  async updateMeetingsForDate(date: string): Promise<void> {
+    const parsedDate = this.parseYMD(date);
+    if (!parsedDate) return;
+
+    const meetings = this.getMeetingsForDate(date);
     const list = this.generateBlock(meetings);
-    const notePath = this.getDailyNotePath();
+    const notePath = this.getDailyNotePath(parsedDate);
     const existing = this.app.vault.getAbstractFileByPath(notePath);
 
     if (!existing) {

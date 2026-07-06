@@ -1,7 +1,7 @@
 {
   "id": "daily-meetings-tracker",
   "name": "Daily Meetings Tracker",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "minAppVersion": "1.7.0",
   "description": "Automatically generates and maintains a daily checklist of meetings in the daily note.",
   "author": "Joost",

@@ -56,17 +56,19 @@ Meetings are ordered by file creation time (ascending).
 
 The checklist is updated automatically on:
 
-- Obsidian startup
-- Opening today's daily note
-- Any change to a meeting note's frontmatter
+- Obsidian startup (today's daily note only)
+- Opening any recognized daily note (that note's own date)
+- Any change to a meeting note's frontmatter (the daily note matching that meeting's `date`)
 
-All triggers are debounced by 1 second. A manual trigger is also available via the command palette.
+These triggers are debounced by 1 second, per date. A manual command is also available via the command palette or a bound hotkey, and runs immediately without debouncing.
+
+If the target daily note (and its folder structure) doesn't exist yet, it is created automatically.
 
 ## Commands
 
-| Command                  | Description                        |
-| ------------------------ | ---------------------------------- |
-| Update Today's Meetings  | Manually sync the meeting checklist |
+| Command                             | Description                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------- |
+| Update Meetings in Current Daily Note | Refreshes the Meetings section of the currently open daily note, for its own date. No-ops with a Notice if the active file isn't a recognized daily note. |
 
 ## Installation
 

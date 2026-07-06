@@ -81,10 +81,10 @@ Include only meetings where:
 ```text
 type === "Meeting"
 AND
-date === today
+date === <target date>
 ```
 
-Scan the entire vault. No exceptions.
+The target date is today's for the startup trigger, the meeting's own `date` for the meeting-change trigger, and the daily note's own date for the open/hotkey triggers. Scan the entire vault. No exceptions.
 
 ---
 
@@ -113,12 +113,14 @@ Scan the entire vault. No exceptions.
 
 Plugin runs on:
 
-1. Obsidian startup
-2. Opening today's daily note
-3. Any meeting note change (frontmatter via `metadataCache`)
-4. Manual command: "Update Today's Meetings"
+1. Obsidian startup (today's daily note only)
+2. Opening any recognized daily note (updates that note's own date)
+3. Any meeting note change (frontmatter via `metadataCache`; updates the daily note for that meeting's own `date`)
+4. Manual command: "Update Meetings in Current Daily Note" (updates the currently active daily note's own date; no-ops with a Notice if the active file isn't a recognized daily note)
 
-All triggers are debounced at **1 second**.
+Triggers 1–3 are debounced at **1 second**, keyed per date so concurrent updates to different dates don't collapse into one. Trigger 4 runs immediately, bypassing debouncing.
+
+A file→date resolver parses a candidate `YYYY-MM-DD` from a note's path and confirms the full path matches the deterministically-computed daily note path for that date, to recognize daily notes generally (not just today's).
 
 ---
 
@@ -147,8 +149,9 @@ Before writing:
 ## 13. UX Requirements
 
 * No settings UI
-* Command palette entry: "Update Today's Meetings" (supports hotkey binding)
+* Command palette entry: "Update Meetings in Current Daily Note" (supports hotkey binding)
 * Fully automatic — enabled by default on startup
+* Target daily note (and folder structure) is created automatically if missing, whether triggered by the command or a `Processed` toggle
 
 ---
 

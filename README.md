@@ -62,7 +62,7 @@ The checklist is updated automatically on:
 
 These triggers are debounced by 1 second, per date. A manual command is also available via the command palette or a bound hotkey, and runs immediately without debouncing.
 
-If the target daily note (and its folder structure) doesn't exist yet, it is created automatically.
+The plugin only updates daily notes that already exist — it never creates a daily note or its folder structure. If the target daily note doesn't exist yet, the sync is skipped silently.
 
 ## Commands
 

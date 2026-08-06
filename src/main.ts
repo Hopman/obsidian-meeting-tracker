@@ -165,36 +165,16 @@ export default class DailyMeetingsPlugin extends Plugin {
     return { result, changed: result !== content };
   }
 
-  private async ensureFolderPath(filePath: string): Promise<void> {
-    const folder = filePath.substring(0, filePath.lastIndexOf('/'));
-    if (!folder) return;
-
-    const parts = folder.split('/').filter(Boolean);
-    let current = '';
-    for (const part of parts) {
-      current = current ? `${current}/${part}` : part;
-      if (!this.app.vault.getAbstractFileByPath(current)) {
-        await this.app.vault.createFolder(current);
-      }
-    }
-  }
-
   async updateMeetingsForDate(date: string): Promise<void> {
     const parsedDate = this.parseYMD(date);
     if (!parsedDate) return;
 
-    const meetings = this.getMeetingsForDate(date);
-    const list = this.generateBlock(meetings);
     const notePath = this.getDailyNotePath(parsedDate);
     const existing = this.app.vault.getAbstractFileByPath(notePath);
-
-    if (!existing) {
-      await this.ensureFolderPath(notePath);
-      await this.app.vault.create(notePath, this.buildSection(list));
-      return;
-    }
-
     if (!(existing instanceof TFile)) return;
+
+    const meetings = this.getMeetingsForDate(date);
+    const list = this.generateBlock(meetings);
 
     const content = await this.app.vault.read(existing);
     const applied = this.applyBlock(content, list);

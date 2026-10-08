@@ -1,4 +1,4 @@
-# Obsidian Meeting Tracker
+# Daily Meetings Tracker
 
 Automatically generates and maintains a daily checklist of meetings in your daily note.
 

@@ -126,7 +126,7 @@ export default class DailyMeetingsPlugin extends Plugin {
   }
 
   private isProcessed(file: TFile): boolean {
-    const value = this.app.metadataCache.getFileCache(file)?.frontmatter?.Processed;
+    const value: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter?.Processed;
     return value === true || value === 'true';
   }
 

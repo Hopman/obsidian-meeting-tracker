@@ -6,6 +6,7 @@ const DAILY_NOTE_DATE_RE = /(\d{4}-\d{2}-\d{2})\.md$/;
 
 export default class DailyMeetingsPlugin extends Plugin {
   private debouncedUpdaters = new Map<string, () => void>();
+  private awaitingContent = new Set<string>();
 
   async onload() {
     this.addCommand({
@@ -27,6 +28,11 @@ export default class DailyMeetingsPlugin extends Plugin {
 
     this.registerEvent(
       this.app.metadataCache.on('changed', (file) => {
+        if (this.awaitingContent.has(file.path)) {
+          const date = this.resolveDailyNoteDate(file);
+          if (date) void this.updateMeetingsForDate(date);
+          return;
+        }
         if (!this.isMeetingNote(file)) return;
         const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
         const date = this.frontmatterDateString(fm?.date);
@@ -177,6 +183,14 @@ export default class DailyMeetingsPlugin extends Plugin {
     const list = this.generateBlock(meetings);
 
     const content = await this.app.vault.read(existing);
+    if (content.trim() === '') {
+      // Freshly created note: leave it empty so Templater can apply the
+      // template, and sync once content first appears.
+      this.awaitingContent.add(notePath);
+      return;
+    }
+    this.awaitingContent.delete(notePath);
+
     const applied = this.applyBlock(content, list);
     const { result, changed } = applied ?? {
       result: this.joinSection(this.buildSection(list), content, list.length > 0),
